@@ -229,12 +229,13 @@ input:focus { outline: none; border-width: 2.5px; }
 .detail-head {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   margin-bottom: 6px;
+  padding-right: 44px; /* 给右上角 × 让位，避免与读音键重合 */
 }
 .detail-word { font-size: 26px; font-weight: 700; word-break: break-all; }
 .detail-speak {
   width: 34px; height: 34px; border-radius: 50%;
   border: 1.5px solid var(--line); background: #fff;
-  font-size: 15px; margin-left: auto;
+  font-size: 15px; flex-shrink: 0;
 }
 .detail-speak:active { background: #f2f2f2; }
 .detail-meaning { font-size: 16px; color: var(--ink-2); margin-bottom: 14px; }
