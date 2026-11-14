@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<title>英语学习助手</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 顶部 -->
+  <header class="topbar">
+    <h1 id="pageTitle">单词本</h1>
+    <span id="cloudStatus" class="cloud-status">连接中…</span>
+  </header>
+
+  <main id="main">
+    <!-- ============ 单词本 ============ -->
+    <section id="page-words" class="page">
+      <div class="search-row">
+        <input id="searchInput" type="search" placeholder="搜索单词 / 释义…" autocomplete="off">
+      </div>
+
+      <button id="btnShowAdd" class="btn-primary btn-block">＋ 添加单词</button>
+
+      <div id="addForm" class="add-form hidden">
+        <input id="fWord" type="text" placeholder="单词 *" autocapitalize="off" autocorrect="off">
+        <input id="fPos" type="text" placeholder="词性（n. / v. / adj. …可选）">
+        <input id="fMeaning" type="text" placeholder="释义 *">
+        <input id="fExample" type="text" placeholder="例句（可选）">
+        <input id="fExampleCn" type="text" placeholder="例句翻译（可选）">
+        <div class="row2">
+          <button id="btnSaveWord" class="btn-primary">保存</button>
+          <button id="btnCancelAdd" class="btn-plain">取消</button>
+        </div>
+      </div>
+
+      <div id="wordCount" class="muted"></div>
+      <div id="wordList"></div>
+    </section>
+
+    <!-- ============ 出题练习 ============ -->
+    <section id="page-quiz" class="page hidden">
+      <!-- 待开始 -->
+      <div id="quizIdle">
+        <div class="quiz-intro card">
+          <p class="quiz-title">出一轮题</p>
+          <p class="muted">30 题一轮：10 选择 + 10 拼写 + 10 听力<br>错词优先出题（不足 30 个时按实际数量）</p>
+          <button id="btnStartQuiz" class="btn-primary btn-block">开始练习</button>
+        </div>
+        <div id="quizHistory" class="card">
+          <p class="sec-title">最近练习</p>
+          <div id="historyList" class="muted">加载中…</div>
+        </div>
+      </div>
+
+      <!-- 答题中 -->
+      <div id="quizPlaying" class="hidden">
+        <div class="progress-row">
+          <div class="progress-bar"><div id="progressFill"></div></div>
+          <span id="progressText" class="muted"></span>
+        </div>
+        <div id="quizCard" class="card question-card"></div>
+      </div>
+
+      <!-- 结果 -->
+      <div id="quizResult" class="hidden card">
+        <p class="result-emoji">🎯</p>
+        <p id="resultScore" class="result-score"></p>
+        <p id="resultMsg" class="muted"></p>
+        <div id="wrongList"></div>
+        <button id="btnAgain" class="btn-primary btn-block">再来一轮</button>
+        <button id="btnBackWords" class="btn-plain btn-block">返回</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部导航 -->
+  <nav class="tabbar">
+    <button class="tab active" data-page="words">📖<span>单词本</span></button>
+    <button class="tab" data-page="quiz">✏️<span>出题练习</span></button>
+  </nav>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
