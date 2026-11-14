@@ -131,7 +131,6 @@ function renderWords() {
           ${w.pos ? `<span class="word-pos">${escapeHtml(w.pos)}</span>` : ""}
         </div>
         <div class="word-cn">${escapeHtml(w.meaning)}</div>
-        ${w.example ? `<div class="word-ex">💡 ${escapeHtml(w.example)}${w.example_cn ? " · " + escapeHtml(w.example_cn) : ""}</div>` : ""}
         <div class="word-stats">对 ${w.correct_count || 0} / 错 ${w.wrong_count || 0}
           ${w.wrong_pending ? ' <span class="flag-wrong">· 待复习</span>' : ""}
         </div>
@@ -141,6 +140,80 @@ function renderWords() {
       </div>
     </div>`).join("") ||
     `<div class="card muted" style="text-align:center">还没有单词，点上面按钮添加吧</div>`;
+}
+
+/* ---------- 双击单词卡片打开详情 ---------- */
+
+let _lastTap = { id: null, t: 0 };
+
+function _cardIdFrom(el) {
+  const card = el && el.closest ? el.closest(".word-card") : null;
+  return card ? Number(card.dataset.id) : null;
+}
+
+function initWordDetailGesture() {
+  const list = document.getElementById("wordList");
+  // 手机端：touchend 双击检测（passive 读取坐标，touchend 本身可阻断）
+  list.addEventListener(
+    "touchend",
+    (ev) => {
+      const id = _cardIdFrom(ev.target);
+      if (id === null) return;
+      // 点在删除按钮上不触发详情
+      if (ev.target.closest && ev.target.closest("button")) return;
+      const now = Date.now();
+      if (_lastTap.id === id && now - _lastTap.t < 350) {
+        ev.preventDefault(); // 阻止移动端浏览器把双击当缩放
+        _lastTap = { id: null, t: 0 };
+        openWordDetail(id);
+      } else {
+        _lastTap = { id, t: now };
+      }
+    },
+    { passive: false }
+  );
+  // 电脑浏览器：原生双击
+  list.addEventListener("dblclick", (ev) => {
+    if (ev.target.closest && ev.target.closest("button")) return;
+    openWordDetail(_cardIdFrom(ev.target));
+  });
+}
+
+function openWordDetail(id) {
+  const w = WORDS.find((x) => Number(x.id) === id);
+  if (!w) return;
+  const ex = (w.example || "").trim();
+  const exCn = (w.example_cn || "").trim();
+  const html = `
+    <div class="detail-mask" id="detailMask">
+      <div class="detail-card">
+        <button class="detail-close" onclick="closeWordDetail()">×</button>
+        <div class="detail-head">
+          <span class="detail-word">${escapeHtml(w.word)}</span>
+          ${w.pos ? `<span class="word-pos">${escapeHtml(w.pos)}</span>` : ""}
+          <button class="detail-speak" onclick="speak('${escapeHtml(w.word)}')">🔊</button>
+        </div>
+        <div class="detail-meaning">${escapeHtml(w.meaning)}</div>
+        <div class="detail-sec">例句</div>
+        <div class="detail-ex">${ex ? escapeHtml(ex) : "—"}</div>
+        <div class="detail-sec">例句翻译</div>
+        <div class="detail-ex">${exCn ? escapeHtml(exCn) : "—"}</div>
+        <div class="detail-stats">对 ${w.correct_count || 0} / 错 ${w.wrong_count || 0}${
+          w.wrong_pending ? ' · <span class="flag-wrong">待复习</span>' : ""
+        }</div>
+      </div>
+    </div>`;
+  const old = document.getElementById("detailMask");
+  if (old) old.remove();
+  document.body.insertAdjacentHTML("beforeend", html);
+  document.getElementById("detailMask").addEventListener("click", (ev) => {
+    if (ev.target.id === "detailMask") closeWordDetail();
+  });
+}
+
+function closeWordDetail() {
+  const m = document.getElementById("detailMask");
+  if (m) m.remove();
 }
 
 async function removeWord(id, wordText) {
@@ -445,3 +518,4 @@ async function init() {
 }
 
 init();
+initWordDetailGesture();
