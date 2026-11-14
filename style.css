@@ -202,3 +202,47 @@ input:focus { outline: none; border-width: 2.5px; }
 }
 
 .hidden { display: none !important; }
+
+/* ---------- 单词详情浮层（双击单词卡片打开） ---------- */
+.detail-mask {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 90;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px 16px calc(20px + var(--safe-bottom));
+}
+.detail-card {
+  position: relative;
+  background: #fff; color: var(--ink);
+  border: 2px solid var(--line); border-radius: var(--radius);
+  width: 100%; max-width: 420px;
+  max-height: 80vh; overflow-y: auto;
+  padding: 20px 18px 16px;
+}
+.detail-close {
+  position: absolute; top: 8px; right: 10px;
+  width: 36px; height: 36px;
+  font-size: 22px; line-height: 1; color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: 50%; background: #fff;
+}
+.detail-close:active { background: #f2f2f2; }
+.detail-head {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.detail-word { font-size: 26px; font-weight: 700; word-break: break-all; }
+.detail-speak {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1.5px solid var(--line); background: #fff;
+  font-size: 15px; margin-left: auto;
+}
+.detail-speak:active { background: #f2f2f2; }
+.detail-meaning { font-size: 16px; color: var(--ink-2); margin-bottom: 14px; }
+.detail-sec {
+  font-size: 12px; font-weight: 700; color: var(--ink);
+  display: inline-block;
+  border: 1.5px solid var(--line); border-radius: 6px;
+  padding: 2px 8px; margin-bottom: 6px;
+}
+.detail-ex { font-size: 15px; line-height: 1.7; margin-bottom: 12px; word-break: break-word; }
+.detail-stats { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
