@@ -483,9 +483,13 @@ function answerChoice(btn) {
   afterAnswer(ok, q.word_id, q.word, q.meaning);
 }
 
-/* 与电脑端 get_words_by_meaning 一致：所有中文释义相同的单词（拼写题多答案判定） */
-function wordsByMeaning(meaning) {
-  return WORDS.filter((w) => w.meaning === meaning).map((w) => w.word).sort();
+/* 与电脑端 get_words_by_meaning 一致：释义相同且词性也相同才算同义词（conserve/conservation 不算） */
+function wordsByMeaning(meaning, pos) {
+  const p = (pos || "").trim();
+  return WORDS
+    .filter((w) => w.meaning === meaning && (w.pos || "").trim() === p)
+    .map((w) => w.word)
+    .sort();
 }
 
 function answerSpell() {
@@ -507,15 +511,16 @@ function answerSpell() {
     let others = [];
     if (ok) {
       const exclude = new Set([q.word.trim().toLowerCase(), lower]);
-      others = wordsByMeaning(q.meaning).filter((w) => !exclude.has(w.trim().toLowerCase()));
+      others = wordsByMeaning(q.meaning, target && target.pos).filter((w) => !exclude.has(w.trim().toLowerCase()));
     }
     fb.className = "q-feedback " + (ok ? "ok" : "no");
     fb.textContent =
       "✅ 正确！" + reveal + (others.length ? "  其他符合的单词：" + others.join(" / ") : "");
     if (!ok) fb.textContent = "❌ 正确答案：" + reveal;
   } else {
-    // 拼写题：所有中文释义相同的单词都算正确（与电脑端一致）
-    const accepted = wordsByMeaning(q.meaning);
+    // 拼写题：中文释义相同且词性相同的单词都算正确（与电脑端一致）
+    const target = WORDS.find((x) => x.id === q.word_id);
+    const accepted = wordsByMeaning(q.meaning, target && target.pos);
     const list = accepted.length ? accepted : [q.word];
     const ok = list.some((w) => w.trim().toLowerCase() === lower);
     const display = list.join(" / ");
