@@ -500,6 +500,10 @@ function answerSpell() {
   if (q.qtype === "listen") {
     // 听力题：精确匹配，同义词不算（与电脑端一致）；答对后仍提示其他同释义词
     const ok = lower === q.word.trim().toLowerCase();
+    // 答后揭示：单词（词性） 释义
+    const target = WORDS.find((x) => x.id === q.word_id);
+    const posTxt = target && target.pos ? "（" + target.pos + "）" : "";
+    const reveal = q.word + posTxt + " " + q.meaning;
     let others = [];
     if (ok) {
       const exclude = new Set([q.word.trim().toLowerCase(), lower]);
@@ -507,8 +511,8 @@ function answerSpell() {
     }
     fb.className = "q-feedback " + (ok ? "ok" : "no");
     fb.textContent =
-      "✅ 正确！" + (others.length ? "  其他符合的单词：" + others.join(" / ") : "");
-    if (!ok) fb.textContent = "❌ 正确答案：" + q.word;
+      "✅ 正确！" + reveal + (others.length ? "  其他符合的单词：" + others.join(" / ") : "");
+    if (!ok) fb.textContent = "❌ 正确答案：" + reveal;
   } else {
     // 拼写题：所有中文释义相同的单词都算正确（与电脑端一致）
     const accepted = wordsByMeaning(q.meaning);
