@@ -371,15 +371,21 @@ function buildOptions(target) {
 /* ---------- 练习状态机 ---------- */
 
 let round = [], idx = 0, correctN = 0, wrongItems = [], answered = false, roundStart = "";
+let quizPhase = "idle"; // idle | playing | result（切 Tab 后恢复现场用）
+
+function setQuizView(phase) {
+  quizPhase = phase;
+  document.getElementById("quizIdle").classList.toggle("hidden", phase !== "idle");
+  document.getElementById("quizPlaying").classList.toggle("hidden", phase !== "playing");
+  document.getElementById("quizResult").classList.toggle("hidden", phase !== "result");
+}
 
 async function startQuiz() {
   if (WORDS.length === 0) return toast("词库是空的，先去添加单词吧");
   round = pickRound();
   idx = 0; correctN = 0; wrongItems = [];
   roundStart = nowStr();
-  document.getElementById("quizIdle").classList.add("hidden");
-  document.getElementById("quizResult").classList.add("hidden");
-  document.getElementById("quizPlaying").classList.remove("hidden");
+  setQuizView("playing");
   // 与电脑端一致：这批词统一记为「刚出过题」
   const t = nowStr();
   round.forEach((q) => {
@@ -547,8 +553,7 @@ function nextQuestion() {
 
 async function finishQuiz() {
   document.getElementById("progressFill").style.width = "100%";
-  document.getElementById("quizPlaying").classList.add("hidden");
-  document.getElementById("quizResult").classList.remove("hidden");
+  setQuizView("result");
   const total = round.length;
   document.getElementById("resultScore").textContent = correctN + " / " + total;
   document.getElementById("resultMsg").textContent =
@@ -588,10 +593,14 @@ function switchPage(name) {
   document.getElementById("page-quiz").classList.toggle("hidden", name !== "quiz");
   document.getElementById("pageTitle").textContent = name === "words" ? "单词本" : "出题练习";
   if (name === "quiz") {
-    document.getElementById("quizIdle").classList.remove("hidden");
-    document.getElementById("quizPlaying").classList.add("hidden");
-    document.getElementById("quizResult").classList.add("hidden");
-    loadHistory();
+    if (quizPhase === "playing" || quizPhase === "result") {
+      // 做题中途 / 刚出结果时切走又切回：恢复现场，不丢进度
+      setQuizView(quizPhase);
+      if (quizPhase === "result") loadHistory();
+    } else {
+      setQuizView("idle");
+      loadHistory();
+    }
   }
 }
 
