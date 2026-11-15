@@ -323,7 +323,7 @@ function pickRound() {
   shuffle(picked);
   const cEnd = Math.min(10, n), sEnd = Math.min(20, n);
   return picked.map((w, i) => ({
-    word_id: w.id, word: w.word, meaning: w.meaning,
+    word_id: w.id, word: w.word, meaning: w.meaning, pos: w.pos || "",
     qtype: i < cEnd ? "choice" : i < sEnd ? "spell" : "listen",
   }));
 }
@@ -415,8 +415,9 @@ function showQuestion() {
     });
     html += `</div><div class="q-feedback" id="qFeedback"></div>`;
   } else if (q.qtype === "spell") {
+    const prompt = (q.pos ? q.pos + " " : "") + q.meaning;
     html += `
-      <div class="q-word">${escapeHtml(q.meaning)}</div>
+      <div class="q-word">${escapeHtml(prompt)}</div>
       <div class="q-hint">拼写对应的英文单词</div>
       <input id="spellInput" class="q-input" type="text" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="输入英文…">
       <div class="q-feedback" id="qFeedback"></div>
