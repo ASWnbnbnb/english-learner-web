@@ -179,7 +179,7 @@ function initWordDetailGesture() {
   });
 }
 
-function openWordDetail(id) {
+function openWordDetail(id, forceView) {
   const w = WORDS.find((x) => Number(x.id) === id);
   if (!w) return;
   const ex = (w.example || "").trim();
@@ -201,12 +201,67 @@ function openWordDetail(id) {
         <div class="detail-stats">对 ${w.correct_count || 0} / 错 ${w.wrong_count || 0}${
           w.wrong_pending ? ' · <span class="flag-wrong">待复习</span>' : ""
         }</div>
+        <button class="btn-plain btn-block" style="margin-top:14px" onclick="openWordEdit()">✏️ 编辑此单词</button>
       </div>
     </div>`;
+  showDetailHtml(html, id);
+}
+
+function openWordEdit() {
+  const id = Number(document.getElementById("detailMask").dataset.id);
+  const w = WORDS.find((x) => Number(x.id) === id);
+  if (!w) return;
+  const html = `
+    <div class="detail-mask" id="detailMask" data-id="${id}">
+      <div class="detail-card">
+        <button class="detail-close" onclick="openWordDetail(${id}, true)">×</button>
+        <div class="detail-sec" style="margin-bottom:12px">编辑单词</div>
+        <input id="eWord" type="text" value="${escapeHtml(w.word)}" placeholder="单词">
+        <input id="eMeaning" type="text" value="${escapeHtml(w.meaning)}" placeholder="中文释义">
+        <input id="ePos" type="text" value="${escapeHtml(w.pos || "")}" placeholder="词性（如 n. / v. / adj.）">
+        <input id="eExample" type="text" value="${escapeHtml(w.example || "")}" placeholder="例句（可空）">
+        <input id="eExampleCn" type="text" value="${escapeHtml(w.example_cn || "")}" placeholder="例句翻译（可空）">
+        <div class="row2" style="margin-top:4px">
+          <button class="btn-plain" onclick="openWordDetail(${id}, true)">取消</button>
+          <button class="btn-primary" onclick="saveWordEdit()">保存</button>
+        </div>
+      </div>
+    </div>`;
+  showDetailHtml(html, id);
+}
+
+async function saveWordEdit() {
+  const id = Number(document.getElementById("detailMask").dataset.id);
+  const w = WORDS.find((x) => Number(x.id) === id);
+  if (!w) return;
+  const word = document.getElementById("eWord").value.trim();
+  const meaning = document.getElementById("eMeaning").value.trim();
+  if (!word || !meaning) return toast("单词和释义都不能为空");
+  const fields = {
+    word,
+    meaning,
+    pos: document.getElementById("ePos").value.trim(),
+    example: document.getElementById("eExample").value.trim(),
+    example_cn: document.getElementById("eExampleCn").value.trim(),
+  };
+  try {
+    await patchWordRemote(id, fields);
+    Object.assign(w, fields);
+    renderWords();
+    toast("已保存 ☁️ 已同步");
+    openWordDetail(id, true);
+  } catch (e) {
+    toast(e.message && e.message.includes("duplicate") ? "词库已有这个单词" : "保存失败：" + e.message, 3000);
+  }
+}
+
+function showDetailHtml(html, id) {
   const old = document.getElementById("detailMask");
   if (old) old.remove();
   document.body.insertAdjacentHTML("beforeend", html);
-  document.getElementById("detailMask").addEventListener("click", (ev) => {
+  const mask = document.getElementById("detailMask");
+  mask.dataset.id = id;
+  mask.addEventListener("click", (ev) => {
     if (ev.target.id === "detailMask") closeWordDetail();
   });
 }
@@ -350,7 +405,7 @@ function showQuestion() {
       <div class="q-hint">选出正确释义</div>
       <div class="q-options">`;
     buildOptions(q).forEach((m) => {
-      html += `<button class="q-option" onclick="answerChoice(this)">${escapeHtml(m)}</button>`;
+      html += `<button class="q-option" data-meaning="${escapeHtml(m)}" onclick="answerChoice(this)">${escapeHtml(m)}</button>`;
     });
     html += `</div><div class="q-feedback" id="qFeedback"></div>`;
   } else if (q.qtype === "spell") {
@@ -393,17 +448,38 @@ async function recordResultRemote(wordId, isCorrect) {
   try { await patchWordRemote(wordId, fields); } catch (e) { /* 下次同步会补 */ }
 }
 
+/* 与电脑端一致的选项标注：每个释义后面追加（词性 单词） */
+function annotateChoiceOptions(q) {
+  const target = WORDS.find((x) => x.id === q.word_id);
+  document.querySelectorAll(".q-option").forEach((b) => {
+    const m = b.dataset.meaning;
+    let w;
+    if (m === q.meaning) {
+      w = target || WORDS.find((x) => x.meaning === m);
+    } else {
+      w = WORDS.find((x) => x.meaning === m);
+    }
+    if (w) b.textContent = m + "（" + (w.pos ? w.pos + " " : "") + w.word + "）";
+  });
+}
+
 function answerChoice(btn) {
   if (answered) return;
   answered = true;
   const q = round[idx];
-  const ok = btn.textContent === q.meaning;
+  const ok = btn.dataset.meaning === q.meaning;
   document.querySelectorAll(".q-option").forEach((b) => {
     b.disabled = true;
-    if (b.textContent === q.meaning) b.classList.add("correct");
+    if (b.dataset.meaning === q.meaning) b.classList.add("correct");
   });
   if (!ok) btn.classList.add("wrong");
+  annotateChoiceOptions(q);
   afterAnswer(ok, q.word_id, q.word, q.meaning);
+}
+
+/* 与电脑端 get_words_by_meaning 一致：所有中文释义相同的单词（拼写题多答案判定） */
+function wordsByMeaning(meaning) {
+  return WORDS.filter((w) => w.meaning === meaning).map((w) => w.word).sort();
 }
 
 function answerSpell() {
@@ -412,13 +488,40 @@ function answerSpell() {
   const inp = document.getElementById("spellInput");
   if (!inp || !inp.value.trim()) return toast("先输入答案");
   answered = true;
-  const ok = inp.value.trim().toLowerCase() === q.word.toLowerCase();
+  const user = inp.value.trim();
+  const lower = user.toLowerCase();
   const fb = document.getElementById("qFeedback");
-  fb.className = "q-feedback " + (ok ? "ok" : "no");
-  fb.textContent = ok ? "✅ 正确！" : "❌ 正确答案：" + q.word;
+  if (q.qtype === "listen") {
+    // 听力题：精确匹配，同义词不算（与电脑端一致）；答对后仍提示其他同释义词
+    const ok = lower === q.word.trim().toLowerCase();
+    let others = [];
+    if (ok) {
+      const exclude = new Set([q.word.trim().toLowerCase(), lower]);
+      others = wordsByMeaning(q.meaning).filter((w) => !exclude.has(w.trim().toLowerCase()));
+    }
+    fb.className = "q-feedback " + (ok ? "ok" : "no");
+    fb.textContent =
+      "✅ 正确！" + (others.length ? "  其他符合的单词：" + others.join(" / ") : "");
+    if (!ok) fb.textContent = "❌ 正确答案：" + q.word;
+  } else {
+    // 拼写题：所有中文释义相同的单词都算正确（与电脑端一致）
+    const accepted = wordsByMeaning(q.meaning);
+    const list = accepted.length ? accepted : [q.word];
+    const ok = list.some((w) => w.trim().toLowerCase() === lower);
+    const display = list.join(" / ");
+    let others = [];
+    if (ok) {
+      const exclude = new Set([q.word.trim().toLowerCase(), lower]);
+      others = list.filter((w) => !exclude.has(w.trim().toLowerCase()));
+    }
+    fb.className = "q-feedback " + (ok ? "ok" : "no");
+    fb.textContent = ok
+      ? "✅ 正确！" + (others.length ? "  其他符合的单词：" + others.join(" / ") : "")
+      : "❌ 正确答案：" + display;
+  }
   const nextBtn = document.querySelector(".q-next");
   if (nextBtn) { nextBtn.textContent = "下一题 →"; nextBtn.onclick = nextQuestion; }
-  afterAnswer(ok, q.word_id, q.word, q.meaning);
+  afterAnswer(fb.className.includes("ok"), q.word_id, q.word, q.meaning);
 }
 
 function afterAnswer(ok, wordId, word, meaning) {
