@@ -378,6 +378,7 @@ function buildOptions(target) {
 /* ---------- 练习状态机 ---------- */
 
 let round = [], idx = 0, correctN = 0, wrongItems = [], answered = false, roundStart = "";
+let roundLog = []; // 每题答题明细 {ok, user_answer, correct_answer}，用于历史详情
 let quizPhase = "idle"; // idle | playing | result（切 Tab 后恢复现场用）
 
 function setQuizView(phase) {
@@ -390,7 +391,7 @@ function setQuizView(phase) {
 async function startQuiz() {
   if (WORDS.length === 0) return toast("词库是空的，先去添加单词吧");
   round = pickRound();
-  idx = 0; correctN = 0; wrongItems = [];
+  idx = 0; correctN = 0; wrongItems = []; roundLog = [];
   roundStart = nowStr();
   setQuizView("playing");
   // 与电脑端一致：这批词统一记为「刚出过题」
@@ -482,6 +483,7 @@ function answerChoice(btn) {
   answered = true;
   const q = round[idx];
   const ok = btn.dataset.meaning === q.meaning;
+  roundLog[idx] = { ok, user_answer: btn.dataset.meaning, correct_answer: q.meaning };
   document.querySelectorAll(".q-option").forEach((b) => {
     b.disabled = true;
     if (b.dataset.meaning === q.meaning) b.classList.add("correct");
@@ -512,6 +514,7 @@ function answerSpell() {
   if (q.qtype === "listen") {
     // 听力题：精确匹配，同义词不算（与电脑端一致）；答对后仍提示其他同释义词
     const ok = lower === q.word.trim().toLowerCase();
+    roundLog[idx] = { ok, user_answer: user, correct_answer: q.word };
     // 答后揭示：单词（词性） 释义
     const target = WORDS.find((x) => x.id === q.word_id);
     const posTxt = target && target.pos ? "（" + target.pos + "）" : "";
@@ -532,6 +535,7 @@ function answerSpell() {
     const list = accepted.length ? accepted : [q.word];
     const ok = list.some((w) => w.trim().toLowerCase() === lower);
     const display = list.join(" / ");
+    roundLog[idx] = { ok, user_answer: user, correct_answer: display };
     let others = [];
     if (ok) {
       const exclude = new Set([q.word.trim().toLowerCase(), lower]);
@@ -580,11 +584,16 @@ async function finishQuiz() {
       wrongItems.map((w) => `<div class="wrong-item"><b>${escapeHtml(w.word)}</b><span>${escapeHtml(w.meaning)}</span></div>`).join("")
     : "";
   try {
-    const detail = round.map((q, i) => ({
-      qid: q.word_id, word: q.word, qtype: q.qtype,
-      is_correct: !wrongItems.some((x) => x.word === q.word),
-      at: roundStart,
-    }));
+    const detail = round.map((q, i) => {
+      const log = roundLog[i] || {};
+      return {
+        qid: q.word_id, word: q.word, meaning: q.meaning, qtype: q.qtype,
+        user_answer: log.user_answer || "",
+        correct_answer: log.correct_answer || "",
+        is_correct: log.ok !== undefined ? !!log.ok : !wrongItems.some((x) => x.word === q.word),
+        at: roundStart,
+      };
+    });
     await saveQuizSessionRemote(total, correctN, detail);
     setCloudStatus(true);
   } catch (e) { toast("练习记录上传失败：" + e.message, 3000); }
@@ -622,13 +631,16 @@ async function openSessionDetail(id) {
     const rowsHtml = detail.map((x, i) => {
       const qtype = { choice: "选择", spell: "拼写", listen: "听力" }[x.qtype] || x.qtype;
       const ok = !!x.is_correct;
+      const ansLine =
+        x.user_answer || x.correct_answer
+          ? `你答：${escapeHtml(x.user_answer || "(空)")}　正确答案：${escapeHtml(x.correct_answer || "")}`
+          : "";
       return `
         <div class="sd-row ${ok ? "ok" : "no"}">
           <span class="sd-mark">${ok ? "✓" : "✗"}</span>
           <div class="sd-main">
             <b>${escapeHtml(x.word)}</b>
-            <span class="muted">第${i + 1}题 · ${qtype}${x.meaning ? " · " + escapeHtml(x.meaning) : ""}</span><br>
-            你答：${escapeHtml(x.user_answer || "(空)")}　正确答案：${escapeHtml(x.correct_answer || "")}
+            <span class="muted">第${i + 1}题 · ${qtype}${x.meaning ? " · " + escapeHtml(x.meaning) : ""}</span>${ansLine ? "<br>" + ansLine : ""}
           </div>
         </div>`;
     }).join("") || `<div class="muted">这条记录没有题目明细</div>`;
