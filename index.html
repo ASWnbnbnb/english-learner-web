@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#ffffff">
 <title>英语学习助手</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20261119a">
 </head>
 <body>
 <div id="app">
@@ -20,6 +20,11 @@
     <section id="page-words" class="page">
       <div class="search-row">
         <input id="searchInput" type="search" placeholder="搜索单词 / 释义…" autocomplete="off">
+      </div>
+
+      <div class="sort-row">
+        <button class="sort-btn active" data-sort="time">⏱ 添加时间</button>
+        <button class="sort-btn" data-sort="alpha">A→Z 字母</button>
       </div>
 
       <button id="btnShowAdd" class="btn-primary btn-block">＋ 添加单词</button>
@@ -46,7 +51,7 @@
       <div id="quizIdle">
         <div class="quiz-intro card">
           <p class="quiz-title">出一轮题</p>
-          <p class="muted">30 题一轮：10 选择 + 10 拼写 + 10 听力<br>错词优先出题（不足 30 个时按实际数量）<span style="opacity:.55"> · v20261115e</span></p>
+          <p class="muted">30 题一轮：10 选择 + 10 拼写 + 10 听力<br>错词优先出题（不足 30 个时按实际数量）<span style="opacity:.55"> · v20261119a</span></p>
           <button id="btnStartQuiz" class="btn-primary btn-block">开始练习</button>
         </div>
         <div id="quizHistory" class="card">
@@ -85,7 +90,7 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<script src="config.js?v=20261115e"></script>
-<script src="app.js?v=20261115e"></script>
+<script src="config.js?v=20261119a"></script>
+<script src="app.js?v=20261119a"></script>
 </body>
 </html>
