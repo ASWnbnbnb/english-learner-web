@@ -92,6 +92,15 @@ input:focus { outline: none; border-width: 2.5px; }
 
 /* ---------- 单词本 ---------- */
 .search-row { margin-bottom: 12px; }
+.sort-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.sort-btn {
+  flex: 1; min-height: 40px;
+  border: 2px solid var(--line-soft); border-radius: var(--radius);
+  background: #fff; color: var(--ink-2);
+  font-size: 14px; font-weight: 700;
+}
+.sort-btn.active { border-color: var(--line); color: var(--ink); background: #f2f2f2; }
+.sort-btn:active { background: #f2f2f2; }
 .add-form {
   background: var(--card);
   border: 2px solid var(--line);
@@ -171,8 +180,20 @@ input:focus { outline: none; border-width: 2.5px; }
 .wrong-item b { font-weight: 700; }
 #quizResult .btn-block { margin-top: 10px; }
 
-.history-item { display: flex; justify-content: space-between; padding: 8px 2px; border-bottom: 1px dashed var(--line-soft); font-size: 14px; }
+.history-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 2px; border-bottom: 1px dashed var(--line-soft); font-size: 14px; cursor: pointer; }
 .history-item:last-child { border-bottom: none; }
+.history-item:active { background: #f7f7f7; }
+.history-item .chev { color: var(--ink-3); flex-shrink: 0; font-size: 16px; }
+
+/* ---------- 练习详情浮层（点历史记录打开） ---------- */
+.sd-row { display: flex; gap: 8px; padding: 9px 2px; border-bottom: 1px dashed var(--line-soft); font-size: 13px; line-height: 1.6; }
+.sd-row:last-child { border-bottom: none; }
+.sd-mark { flex-shrink: 0; font-weight: 700; font-size: 15px; }
+.sd-main { flex: 1; min-width: 0; word-break: break-word; }
+.sd-row.ok { color: var(--ink-2); }
+.sd-row.ok .sd-mark { color: var(--ink); }
+.sd-row.no { color: #c0392b; }
+.sd-row.no .sd-main b { color: var(--ink); }
 
 /* ---------- 底部导航 ---------- */
 .tabbar {
