@@ -113,13 +113,20 @@ function setCloudStatus(ok) {
 
 /* ================= 单词本页面 ================= */
 
+/* 排序模式：time=添加时间倒序（默认，与电脑端一致） | alpha=首字母 A-Z（与电脑端一致） */
+let sortMode = localStorage.getItem("el_sort") === "alpha" ? "alpha" : "time";
+
 function renderWords() {
   const kw = (document.getElementById("searchInput").value || "").trim().toLowerCase();
   const list = WORDS.filter(
     (w) => !kw || w.word.toLowerCase().includes(kw) || (w.meaning || "").toLowerCase().includes(kw)
   );
-  // 与电脑端一致：默认按添加时间倒序
-  list.sort((a, b) => (b.id || 0) - (a.id || 0));
+  // 与电脑端一致：时间=按添加时间倒序，字母=按单词首字母 A-Z
+  list.sort((a, b) =>
+    sortMode === "alpha"
+      ? String(a.word).localeCompare(String(b.word), "en")
+      : (b.id || 0) - (a.id || 0)
+  );
 
   document.getElementById("wordCount").textContent = "共 " + list.length + " 个单词";
   const box = document.getElementById("wordList");
@@ -588,10 +595,57 @@ async function loadHistory() {
   try {
     const rows = await api("quiz_sessions?select=*&order=id.desc&limit=10");
     box.innerHTML = rows.length
-      ? rows.map((r) => `<div class="history-item"><span>${escapeHtml((r.finished_at || "").slice(0, 16))}</span><span>${r.correct}/${r.total} 题</span></div>`).join("")
+      ? rows.map((r) =>
+          `<div class="history-item" onclick="openSessionDetail(${r.id})">` +
+          `<span>${escapeHtml((r.finished_at || "").slice(0, 16))}</span>` +
+          `<span>${r.correct}/${r.total} 题</span>` +
+          `<span class="chev">›</span></div>`
+        ).join("")
       : "还没有练习记录，来第一轮吧";
   } catch (e) {
     box.textContent = "加载失败：" + e.message;
+  }
+}
+
+/* ---------- 练习详情浮层：每题对错明细（与电脑端 HistoryDialog 一致） ---------- */
+
+async function openSessionDetail(id) {
+  try {
+    const rows = await api("quiz_sessions?id=eq." + id + "&select=*");
+    if (!rows || !rows.length) return toast("记录不存在");
+    const r = rows[0];
+    let detail = [];
+    try { detail = JSON.parse(r.detail || "[]"); } catch (e) { /* 旧数据无明细 */ }
+    const okN = detail.filter((x) => x.is_correct).length;
+    const noN = detail.length - okN;
+    const rate = detail.length ? Math.round((okN * 100) / detail.length) : 0;
+    const rowsHtml = detail.map((x, i) => {
+      const qtype = { choice: "选择", spell: "拼写", listen: "听力" }[x.qtype] || x.qtype;
+      const ok = !!x.is_correct;
+      return `
+        <div class="sd-row ${ok ? "ok" : "no"}">
+          <span class="sd-mark">${ok ? "✓" : "✗"}</span>
+          <div class="sd-main">
+            <b>${escapeHtml(x.word)}</b>
+            <span class="muted">第${i + 1}题 · ${qtype}${x.meaning ? " · " + escapeHtml(x.meaning) : ""}</span><br>
+            你答：${escapeHtml(x.user_answer || "(空)")}　正确答案：${escapeHtml(x.correct_answer || "")}
+          </div>
+        </div>`;
+    }).join("") || `<div class="muted">这条记录没有题目明细</div>`;
+    const html = `
+      <div class="detail-mask" id="detailMask">
+        <div class="detail-card">
+          <button class="detail-close" onclick="closeWordDetail()">×</button>
+          <div class="detail-head">
+            <span class="detail-word" style="font-size:20px">练习详情</span>
+          </div>
+          <div class="detail-meaning">${escapeHtml((r.finished_at || "").slice(0, 16))} · 共 ${detail.length} 题 · 答对 ${okN} · 答错 ${noN} · 正确率 ${rate}%</div>
+          ${rowsHtml}
+        </div>
+      </div>`;
+    showDetailHtml(html, id);
+  } catch (e) {
+    toast("加载失败：" + e.message, 3000);
   }
 }
 
@@ -619,6 +673,18 @@ async function init() {
     t.addEventListener("click", () => switchPage(t.dataset.page))
   );
   document.getElementById("searchInput").addEventListener("input", renderWords);
+  // 排序切换（与电脑端「按添加时间 / 按首字母 A-Z」一致，选择记忆在本地）
+  document.querySelectorAll(".sort-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.sort === sortMode);
+    b.addEventListener("click", () => {
+      sortMode = b.dataset.sort;
+      localStorage.setItem("el_sort", sortMode);
+      document.querySelectorAll(".sort-btn").forEach((x) =>
+        x.classList.toggle("active", x.dataset.sort === sortMode)
+      );
+      renderWords();
+    });
+  });
   document.getElementById("btnShowAdd").addEventListener("click", () => toggleAddForm(true));
   document.getElementById("btnCancelAdd").addEventListener("click", () => toggleAddForm(false));
   document.getElementById("btnSaveWord").addEventListener("click", saveNewWord);
